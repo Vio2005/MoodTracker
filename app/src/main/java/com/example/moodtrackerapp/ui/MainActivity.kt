@@ -2,13 +2,15 @@ package com.example.moodtrackerapp.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.AppDatabase
 import com.example.moodtrackerapp.data.entity.DailyMoodEntity
+import com.example.moodtrackerapp.data.entity.MoodEntity
 import com.example.moodtrackerapp.databinding.ActivityMainBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
@@ -34,19 +36,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Check first install or logged-in user
         val prefs = getSharedPreferences("MoodAppPrefs", MODE_PRIVATE)
-        val firstInstall = prefs.getBoolean("firstInstall", true)
         currentUserId = prefs.getLong("loggedInUserId", -1L)
-
-        if (firstInstall) {
-            startActivity(Intent(this, IntroActivity::class.java))
-            finish()
-            return
-        }
-
         if (currentUserId == -1L) {
-            startActivity(Intent(this, LoginActivity::class.java))
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -54,147 +47,141 @@ class MainActivity : AppCompatActivity() {
         binding.tvWelcome.text = "Welcome to Mood Tracker!"
         todayDate = SimpleDateFormat("yyyy-M-d", Locale.getDefault()).format(Date())
 
+        setupBottomNavigation()
         loadTodayMood()
-        setupButtons()
-        setupBottomNavigation() // 👈 added
     }
 
-    private fun setupButtons() {
-        // Calendar button (optional if using bottom nav too)
-        binding.btnCalendar.setOnClickListener {
-            startActivity(Intent(this, CalendarActivity::class.java))
-        }
-
-        // Logout button
-        binding.btnLogout.setOnClickListener {
-            val prefs = getSharedPreferences("MoodAppPrefs", MODE_PRIVATE)
-            prefs.edit().putLong("loggedInUserId", -1L).apply()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-        }
-
-        // Select today's mood
-        binding.btnSelectTodayMood.setOnClickListener {
-            val intent = Intent(this, MoodSelectionActivity::class.java)
-            intent.putExtra("date", todayDate)
-            startActivityForResult(intent, REQUEST_MOOD_SELECTION)
-        }
-
-        // Edit today's mood
-        binding.btnEditMood.setOnClickListener {
-            lifecycleScope.launch {
-                val dailyMood = getTodayMood()
-                if (dailyMood != null) {
-                    val intent = Intent(this@MainActivity, EditMoodActivity::class.java)
-                    intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
-                    startActivityForResult(intent, REQUEST_EDIT_MOOD)
-                }
-            }
-        }
-
-        // Edit tags & note
-        binding.btnEditTagsNote.setOnClickListener {
-            lifecycleScope.launch {
-                val dailyMood = getTodayMood()
-                if (dailyMood != null) {
-                    val intent = Intent(this@MainActivity, EditTagAndNoteActivity::class.java)
-                    intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
-                    startActivityForResult(intent, REQUEST_EDIT_TAGS_NOTE)
-                }
-            }
-        }
-
-        // Delete today's mood
-        binding.btnDeleteTodayMood.setOnClickListener {
-            lifecycleScope.launch {
-                val dailyMood = getTodayMood()
-                if (dailyMood != null) {
-                    runOnUiThread {
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Delete Mood")
-                            .setMessage("Do you want to delete today's mood?")
-                            .setPositiveButton("Yes") { _, _ ->
-                                lifecycleScope.launch(Dispatchers.IO) {
-                                    db.dailyMoodDao().deleteDailyMoodById(dailyMood.dailyMoodId)
-                                    runOnUiThread {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "Today's mood deleted",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        loadTodayMood()
-                                    }
-                                }
-                            }
-                            .setNegativeButton("No", null)
-                            .show()
-                    }
-                }
-            }
-        }
-    }
-
-    // 👇 NEW: Bottom Navigation setup
     private fun setupBottomNavigation() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_home -> {
-                    // Already in MainActivity
-                    true
-                }
+                R.id.nav_home -> true
                 R.id.nav_calendar -> {
                     startActivity(Intent(this, CalendarActivity::class.java))
                     true
                 }
-                R.id.nav_profile -> {
-                    // example
-                    true
-                }
+                R.id.nav_profile -> true
                 else -> false
             }
         }
     }
 
-    private suspend fun getTodayMood(): DailyMoodEntity? = withContext(Dispatchers.IO) {
-        db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
-    }
-
     private fun loadTodayMood() {
         lifecycleScope.launch {
-            val dailyMood = getTodayMood()
+            val dailyMood = withContext(Dispatchers.IO) {
+                db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
+            }
+
             if (dailyMood != null) {
-                val mood = withContext(Dispatchers.IO) {
-                    db.moodDao().getMoodById(dailyMood.moodId)
-                }
-                val tags = withContext(Dispatchers.IO) {
-                    db.tagDao().getTagsByDailyMoodId(dailyMood.dailyMoodId)
-                }
-
-                binding.ivTodayMoodIcon.setImageResource(mood?.icon ?: R.drawable.mood_dot)
-                binding.tvTodayMoodType.text = mood?.type ?: ""
-                binding.tvTodayTags.text = if (tags.isNotEmpty()) tags.joinToString { it.name } else ""
-                binding.tvTodayNote.text = dailyMood.note ?: ""
-
-                binding.ivTodayMoodIcon.visibility = android.view.View.VISIBLE
-                binding.tvTodayMoodType.visibility = android.view.View.VISIBLE
-                binding.tvTodayTags.visibility = android.view.View.VISIBLE
-                binding.tvTodayNote.visibility = android.view.View.VISIBLE
-
-                binding.btnEditMood.visibility = android.view.View.VISIBLE
-                binding.btnEditTagsNote.visibility = android.view.View.VISIBLE
-                binding.btnDeleteTodayMood.visibility = android.view.View.VISIBLE
-                binding.btnSelectTodayMood.visibility = android.view.View.GONE
+                showMoodDetails(dailyMood)
             } else {
-                binding.ivTodayMoodIcon.visibility = android.view.View.GONE
-                binding.tvTodayMoodType.visibility = android.view.View.GONE
-                binding.tvTodayTags.visibility = android.view.View.GONE
-                binding.tvTodayNote.visibility = android.view.View.GONE
+                showMoodSelection()
+            }
+        }
+    }
 
-                binding.btnEditMood.visibility = android.view.View.GONE
-                binding.btnEditTagsNote.visibility = android.view.View.GONE
-                binding.btnDeleteTodayMood.visibility = android.view.View.GONE
-                binding.btnSelectTodayMood.visibility = android.view.View.VISIBLE
+    private suspend fun showMoodDetails(dailyMood: DailyMoodEntity) {
+        val mood = withContext(Dispatchers.IO) {
+            db.moodDao().getMoodById(dailyMood.moodId)
+        }
+        val tags = withContext(Dispatchers.IO) {
+            db.tagDao().getTagsByDailyMoodId(dailyMood.dailyMoodId)
+        }
+
+        binding.layoutMoodDetails.visibility = View.VISIBLE
+        binding.rvMoods.visibility = View.GONE
+        binding.btnSelectTodayMood.visibility = View.GONE
+
+        binding.ivTodayMoodIcon.setImageResource(mood?.icon ?: R.drawable.mood_dot)
+        binding.tvTodayMoodType.text = mood?.type ?: ""
+        binding.tvTodayTags.text = if (tags.isNotEmpty()) tags.joinToString { it.name } else "No Tags"
+        binding.tvTodayNote.text = dailyMood.note ?: ""
+
+        binding.btnEditMood.visibility = View.VISIBLE
+        binding.btnEditTagsNote.visibility = View.VISIBLE
+        binding.btnDeleteTodayMood.visibility = View.VISIBLE
+
+        // Edit Mood
+        binding.btnEditMood.setOnClickListener {
+            val intent = Intent(this, EditMoodActivity::class.java)
+            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
+            startActivityForResult(intent, REQUEST_EDIT_MOOD)
+        }
+
+        // Edit Tags & Note
+        binding.btnEditTagsNote.setOnClickListener {
+            val intent = Intent(this, EditTagAndNoteActivity::class.java)
+            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
+            startActivityForResult(intent, REQUEST_EDIT_TAGS_NOTE)
+        }
+
+        // Delete Mood
+        binding.btnDeleteTodayMood.setOnClickListener {
+            lifecycleScope.launch(Dispatchers.IO) {
+                db.dailyMoodDao().deleteDailyMoodById(dailyMood.dailyMoodId)
+                db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMood.dailyMoodId)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Today's mood deleted", Toast.LENGTH_SHORT).show()
+                    loadTodayMood()
+                }
+            }
+        }
+    }
+
+    private fun showMoodSelection() {
+        binding.layoutMoodDetails.visibility = View.GONE
+        binding.rvMoods.visibility = View.VISIBLE
+        binding.btnSelectTodayMood.visibility = View.VISIBLE
+
+        binding.rvMoods.layoutManager = GridLayoutManager(this, 3)
+        lifecycleScope.launch {
+            val moods: List<MoodEntity> = withContext(Dispatchers.IO) {
+                val existingMoods = db.moodDao().getAllMoods()
+                if (existingMoods.isEmpty()) {
+                    val defaultMoods = listOf(
+                        MoodEntity(type = "Happy", icon = R.drawable.joymood),
+                        MoodEntity(type = "Sad", icon = R.drawable.sadmood),
+                        MoodEntity(type = "Angry", icon = R.drawable.angrymood),
+                        MoodEntity(type = "Disgust", icon = R.drawable.disguestmood),
+                        MoodEntity(type = "Lazy", icon = R.drawable.lazymood),
+                        MoodEntity(type = "Anxiety", icon = R.drawable.anxietymood),
+                        MoodEntity(type = "Fear", icon = R.drawable.fearmood),
+                        MoodEntity(type = "Embarrass", icon = R.drawable.embmood),
+                        MoodEntity(type = "Envy", icon = R.drawable.envymood)
+                    )
+                    db.moodDao().insertMoods(defaultMoods)
+                    db.moodDao().getAllMoods()
+                } else existingMoods
+            }
+
+            binding.rvMoods.adapter = MoodAdapter(moods) { selectedMood ->
+                saveTodayMood(selectedMood)
+            }
+        }
+
+        binding.btnSelectTodayMood.setOnClickListener {
+            showMoodSelection()
+        }
+    }
+
+    private fun saveTodayMood(mood: MoodEntity) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val existingMood = db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
+            val dailyMoodId = if (existingMood != null) {
+                existingMood.dailyMoodId
+            } else {
+                db.dailyMoodDao().insertDailyMood(
+                    DailyMoodEntity(
+                        userId = currentUserId,
+                        moodId = mood.moodId,
+                        date = todayDate
+                    )
+                )
+            }
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, "Mood saved: ${mood.type}", Toast.LENGTH_SHORT).show()
+                loadTodayMood()
             }
         }
     }
