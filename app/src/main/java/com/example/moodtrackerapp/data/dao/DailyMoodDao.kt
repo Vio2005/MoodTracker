@@ -23,6 +23,8 @@ interface DailyMoodDao {
     @Query("SELECT * FROM daily_moods WHERE userId = :userId AND date = :date LIMIT 1")
     suspend fun getMoodByUserAndDate(userId: Long, date: String): DailyMoodEntity?
 
+
+
     @Query("SELECT * FROM daily_moods WHERE userId = :userId")
     suspend fun getAllByUser(userId: Long): List<DailyMoodEntity>
 

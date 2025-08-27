@@ -1,13 +1,8 @@
 package com.example.moodtrackerapp.ui
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
-import android.widget.CheckedTextView
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.entity.TagEntity
 import com.example.moodtrackerapp.databinding.ItemTagBinding
 
@@ -16,18 +11,21 @@ class TagAdapter(
 ) : RecyclerView.Adapter<TagAdapter.TagViewHolder>() {
 
     private var tags: List<TagEntity> = listOf()
-    private var selectedTags: List<TagEntity> = listOf()
+    private var selectedTags: Set<Long> = emptySet() // store selected tagIds for fast lookup
 
     fun submitList(allTags: List<TagEntity>, selected: List<TagEntity>) {
         tags = allTags
-        selectedTags = selected
+        selectedTags = selected.map { it.tagId }.toSet()
         notifyDataSetChanged()
     }
 
-    inner class TagViewHolder(val binding: ItemTagBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class TagViewHolder(private val binding: ItemTagBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(tag: TagEntity) {
+            // Remove previous listener to prevent recycling issues
+            binding.cbTag.setOnCheckedChangeListener(null)
+
             binding.cbTag.text = tag.name
-            binding.cbTag.isChecked = selectedTags.any { it.tagId == tag.tagId }
+            binding.cbTag.isChecked = selectedTags.contains(tag.tagId)
 
             binding.cbTag.setOnCheckedChangeListener { _, isChecked ->
                 onTagClick(tag, isChecked)
@@ -44,8 +42,5 @@ class TagAdapter(
         holder.bind(tags[position])
     }
 
-    override fun getItemCount() = tags.size
+    override fun getItemCount(): Int = tags.size
 }
-
-
-
