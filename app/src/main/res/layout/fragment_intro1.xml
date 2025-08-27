@@ -1,0 +1,75 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.IntroFragment1">
+
+    <!-- Background Image -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/jobg"
+        android:scaleType="centerCrop">
+
+    </ImageView>
+    <!-- Foreground Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <!-- Joy Image -->
+        <ImageView
+            android:layout_width="252dp"
+            android:layout_height="280dp"
+            android:layout_marginBottom="24dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:src="@drawable/joy"
+            android:contentDescription="@string/app_name" />
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="Welcome to MoodTracker"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:fontFamily="@font/corben_regular" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="80dp"
+            android:gravity="center"
+            android:lineSpacingExtra="6dp"
+            android:text="Capture your daily moods and embrace a brighter you."
+            android:textSize="20sp"
+            android:textColor="#555555"
+            android:fontFamily="@font/corben_regular" />
+
+        <!-- Next Button -->
+        <Button
+            android:id="@+id/btnNext1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="70dp"
+            android:paddingEnd="70dp"
+            android:layout_marginBottom="40dp"
+            android:text="Next"
+            android:textSize="20sp"
+            android:textColor="#555555"
+            android:fontFamily="@font/corben_regular"
+            app:cornerRadius="0dp"
+            app:backgroundTint="#FFD54F" />
+
+    </LinearLayout>
+
+</FrameLayout>

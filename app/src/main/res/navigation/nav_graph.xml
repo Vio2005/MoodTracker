@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/introFragment1">
+
+    <fragment
+        android:id="@+id/introFragment1"
+        android:name="com.example.moodtrackerapp.ui.IntroFragment1"
+        android:label="Fragment 1" >
+        <action
+            android:id="@+id/action_intro1_to_intro2"
+            app:destination="@id/introFragment2" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/introFragment2"
+        android:name="com.example.moodtrackerapp.ui.IntroFragment2"
+        android:label="Fragment 2" >
+        <action
+            android:id="@+id/action_intro2_to_intro3"
+            app:destination="@id/introFragment3" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/introFragment3"
+        android:name="com.example.moodtrackerapp.ui.IntroFragment3"
+        android:label="Fragment 3" >
+        <!-- Temporary action: just stay on Fragment 3 for now -->
+    </fragment>
+
+</navigation>

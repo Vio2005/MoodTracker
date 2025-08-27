@@ -1,0 +1,73 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Background Image -->
+    <!-- replace with your bg image -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/angerbg"
+        android:scaleType="centerCrop" />
+
+    <!-- Foreground Content -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Icon -->
+        <ImageView
+            android:src="@drawable/anger"
+            android:layout_width="250dp"
+            android:layout_height="250dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Title -->
+        <TextView
+            android:text="Ready to Start?"
+            android:textSize="35sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:gravity="center"
+            android:layout_marginBottom="12dp"
+            android:fontFamily="@font/corben_regular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:text="Track your moods daily, understand yourself better, and stay motivated!"
+            android:textSize="20sp"
+            android:textColor="#555555"
+            android:gravity="center"
+            android:textStyle="bold"
+
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="50dp"
+            android:textFontWeight="1000"
+            android:lineSpacingExtra="6dp"
+            android:fontFamily="@font/corben_regular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Rectangular Button -->
+        <Button
+            android:id="@+id/btnGetStarted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="70dp"
+            android:paddingEnd="70dp"
+            android:layout_marginBottom="40dp"
+            android:text="Get Started"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:fontFamily="@font/corben_regular"
+            app:cornerRadius="0dp"
+            app:backgroundTint="#CC2C0c" />
+    </LinearLayout>
+
+</FrameLayout>
