@@ -6,12 +6,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.applandeo.materialcalendarview.EventDay
 import com.applandeo.materialcalendarview.listeners.OnDayClickListener
-import com.applandeo.materialcalendarview.listeners.OnCalendarPageChangeListener
 import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.AppDatabase
 import com.example.moodtrackerapp.data.entity.DailyMoodEntity
 import com.example.moodtrackerapp.databinding.ActivityCalendarBinding
-import com.example.moodtrackerapp.ui.MoodSelectionActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,49 +44,30 @@ class CalendarActivity : AppCompatActivity() {
         binding.btnGoMain.setOnClickListener {
             startActivity(Intent(this, MainActivity::class.java))
         }
-
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
                     startActivity(Intent(this, MainActivity::class.java))
                     true
                 }
-                R.id.nav_calendar -> true
-                R.id.nav_profile -> true
+                R.id.nav_calendar -> {
+                    // Already in calendar, do nothing
+                    true
+                }
+                R.id.nav_profile -> {
+
+                    true
+                }
                 else -> false
             }
         }
 
-        // Load calendar and counts
-        refreshCalendar()
 
-        // Disable future dates
-        binding.calendarView.post { disableFutureDates() }
+        loadMoodDates()
 
-        // Fast month switching
-        binding.calendarView.setOnForwardPageChangeListener(object : OnCalendarPageChangeListener {
-            override fun onChange() {
-                updateCurrentPageMoodCounts()
-            }
-        })
-
-        binding.calendarView.setOnPreviousPageChangeListener(object : OnCalendarPageChangeListener {
-            override fun onChange() {
-                updateCurrentPageMoodCounts()
-            }
-        })
-
-        // Day click listener
         binding.calendarView.setOnDayClickListener(object : OnDayClickListener {
             override fun onDayClick(eventDay: EventDay) {
                 val calendar = eventDay.calendar
-                val today = Calendar.getInstance()
-                if (calendar.after(today)) {
-                    // Prevent selecting future dates
-                    Toast.makeText(this@CalendarActivity, "Cannot select future date", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
                 val selectedDate = "${calendar.get(Calendar.YEAR)}-" +
                         "${calendar.get(Calendar.MONTH) + 1}-" +
                         "${calendar.get(Calendar.DAY_OF_MONTH)}"
@@ -113,8 +92,11 @@ class CalendarActivity : AppCompatActivity() {
         })
     }
 
-    // 🔄 Refresh calendar dots and counts
     fun refreshCalendar() {
+        loadMoodDates()
+    }
+
+    private fun loadMoodDates() {
         CoroutineScope(Dispatchers.IO).launch {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
             val moodList = dailyMoods.map { dailyMood ->
@@ -145,23 +127,20 @@ class CalendarActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                // Refresh dots
                 binding.calendarView.setEvents(events)
-                // Refresh counts for current page
-                updateCurrentPageMoodCounts()
+
+                // Show counts for current month
+                val today = Calendar.getInstance()
+                updateMoodCountsForMonth(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1)
             }
         }
-    }
-
-    private fun updateCurrentPageMoodCounts() {
-        val currentPage = binding.calendarView.currentPageDate
-        updateMoodCountsForMonth(currentPage.get(Calendar.YEAR), currentPage.get(Calendar.MONTH) + 1)
     }
 
     private fun updateMoodCountsForMonth(year: Int, month: Int) {
         CoroutineScope(Dispatchers.IO).launch {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
 
+            // Filter moods for this month/year
             val filteredMoods = dailyMoods.filter {
                 val parts = it.date.split("-")
                 val moodYear = parts[0].toInt()
@@ -169,6 +148,7 @@ class CalendarActivity : AppCompatActivity() {
                 moodYear == year && moodMonth == month
             }
 
+            // Count moods
             val moodCounts = mutableMapOf<String, Int>()
             for (dailyMood in filteredMoods) {
                 val mood = db.moodDao().getMoodById(dailyMood.moodId)
@@ -198,28 +178,9 @@ class CalendarActivity : AppCompatActivity() {
         }
     }
 
-    // Disable all future dates
-    private fun disableFutureDates() {
-        val today = Calendar.getInstance()
-        val disabledDates = mutableListOf<Calendar>()
-
-        val cal = Calendar.getInstance()
-        cal.time = today.time
-        cal.add(Calendar.DAY_OF_MONTH, 1)
-
-        // Disable up to 1 year ahead
-        for (i in 0 until 365) {
-            disabledDates.add(cal.clone() as Calendar)
-            cal.add(Calendar.DAY_OF_MONTH, 1)
-        }
-
-        binding.calendarView.setDisabledDays(disabledDates)
-    }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_MOOD_TAG && resultCode == RESULT_OK) {
-            // Refresh immediately after adding/editing mood
             refreshCalendar()
         }
     }
@@ -228,4 +189,6 @@ class CalendarActivity : AppCompatActivity() {
         super.onDestroy()
         instance = null
     }
+
 }
+

@@ -6,8 +6,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.moodtrackerapp.R
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.moodtrackerapp.data.AppDatabase
+import com.example.moodtrackerapp.data.entity.DailyMoodTagEntity
+import com.example.moodtrackerapp.data.entity.TagEntity
 import com.example.moodtrackerapp.databinding.ActivityMoodDetailBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -17,7 +19,9 @@ class MoodDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMoodDetailBinding
     private val db by lazy { AppDatabase.getInstance(this) }
+    private lateinit var tagAdapter: TagAdapter
     private var dailyMoodId: Long = -1L
+    private var selectedTags = mutableSetOf<TagEntity>()
 
     private val REQUEST_EDIT = 3001
     private val REQUEST_EDIT_MOOD = 3002
@@ -33,6 +37,11 @@ class MoodDetailActivity : AppCompatActivity() {
             finish()
             return
         }
+
+        // Setup RecyclerView
+        binding.rvTags.layoutManager = LinearLayoutManager(this)
+        tagAdapter = TagAdapter { tag, _ -> }
+        binding.rvTags.adapter = tagAdapter
 
         // Back button
         binding.btnBack.setOnClickListener { finish() }
@@ -60,9 +69,10 @@ class MoodDetailActivity : AppCompatActivity() {
                     lifecycleScope.launch(Dispatchers.IO) {
                         db.dailyMoodDao().deleteDailyMoodById(dailyMoodId)
                         db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMoodId)
+
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@MoodDetailActivity, "Mood deleted", Toast.LENGTH_SHORT).show()
-                            CalendarActivity.instance?.refreshCalendar()
+                            CalendarActivity.instance?.refreshCalendar() // refresh calendar immediately
                             finish()
                         }
                     }
@@ -72,7 +82,7 @@ class MoodDetailActivity : AppCompatActivity() {
                 .show()
         }
 
-        // Load mood + tags + note + icon
+        // Load mood + tags + note
         loadMoodDetail()
     }
 
@@ -96,36 +106,14 @@ class MoodDetailActivity : AppCompatActivity() {
                 db.tagDao().getTagsByDailyMoodId(dailyMoodId)
             }
 
+            selectedTags.clear()
+            selectedTags.addAll(savedTags)
+
             // Show UI
             binding.tvDate.text = "Date: ${dailyMood.date}"
             binding.tvMood.text = "Mood: ${mood?.type ?: "Unknown"}"
-
-            // Set mood icon
-            val moodIconRes = when (mood?.type) {
-                "Happy" -> R.drawable.jcir
-                "Sad" -> R.drawable.scir
-                "Angry" -> R.drawable.acir
-                "Disgust" -> R.drawable.disguestmood
-                "Lazy" -> R.drawable.lcir
-                "Anxiety" -> R.drawable.anxietymood
-                "Fear" -> R.drawable.fcir
-                "Embarrass" -> R.drawable.embmood
-                "Envy" -> R.drawable.envymood
-                else -> R.drawable.mood_dot
-            }
-            binding.ivMoodIcon.setImageResource(moodIconRes)
-
-            // Show tags as comma-separated string
-            binding.tvTags.text = if (savedTags.isNotEmpty()) {
-                "Tags: ${savedTags.joinToString { it.name }}"
-            } else {
-                "Tags: None"
-            }
-
             binding.etNote.setText(dailyMood.note ?: "")
-
-            // Refresh calendar
-            CalendarActivity.instance?.refreshCalendar()
+            tagAdapter.submitList(savedTags, savedTags)
         }
     }
 
