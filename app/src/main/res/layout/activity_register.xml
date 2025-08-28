@@ -17,8 +17,8 @@
     android:padding="32dp">
     <!-- Background Image -->
     <ImageView
-        android:layout_width="250dp"
-        android:layout_height="250dp"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
         android:layout_marginBottom="20dp"
         android:adjustViewBounds="true"
         android:contentDescription="@string/app_name"
@@ -94,8 +94,9 @@
         android:id="@+id/btnRegister"
         android:text="Register"
         android:layout_marginTop="8dp"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/corben_regular"
         app:backgroundTint="#84CF87"
         />
 
