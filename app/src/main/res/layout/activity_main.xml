@@ -1,138 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Main content -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/mainContent"
+    <!-- Main content container -->
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="0dp">
+        android:padding="16dp"
+        android:clipToPadding="false"
+        android:fitsSystemWindows="true">
 
-        <!-- Welcome Text -->
-        <TextView
-            android:id="@+id/tvWelcome"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="Welcome to Mood Tracker!"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Mood details layout -->
+        <!-- Mood details layout (initially hidden, shown when mood is selected) -->
         <LinearLayout
             android:id="@+id/layoutMoodDetails"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/tvWelcome"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:padding="12dp">
 
             <ImageView
                 android:id="@+id/ivTodayMoodIcon"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:layout_gravity="center_horizontal"
-                android:contentDescription="Mood Icon"
-                android:layout_marginBottom="8dp"/>
+                android:src="@drawable/mood_dot" />
 
             <TextView
                 android:id="@+id/tvTodayMoodType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mood Type"
                 android:textSize="18sp"
+                android:textStyle="bold"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="4dp"/>
+                android:paddingTop="8dp" />
 
             <TextView
                 android:id="@+id/tvTodayTags"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Tags"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="4dp"/>
+                android:paddingTop="8dp" />
 
             <TextView
                 android:id="@+id/tvTodayNote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Note"
-                android:layout_marginBottom="8dp"/>
+                android:paddingTop="4dp" />
 
-            <!-- Edit/Delete buttons -->
+            <!-- Buttons for editing/deleting -->
             <LinearLayout
+                android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginBottom="16dp">
+                android:paddingTop="12dp">
 
                 <Button
                     android:id="@+id/btnEditMood"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Edit Mood"
-                    android:layout_marginEnd="8dp"/>
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btnEditTagsNote"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Edit Tags/Note"
-                    android:layout_marginEnd="8dp"/>
+                    android:layout_marginStart="8dp"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btnDeleteTodayMood"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Delete"/>
+                    android:text="Delete"
+                    android:layout_marginStart="8dp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Mood selection RecyclerView -->
+        <!-- Mood selection grid -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvMoods"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/tvWelcome"
-            app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            android:layout_weight="1"
+            android:visibility="visible" />
 
-        <!-- Select mood button -->
+        <!-- Button to select today’s mood (hidden when mood is already chosen) -->
         <Button
             android:id="@+id/btnSelectTodayMood"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select Today's Mood"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/rvMoods"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            tools:ignore="NotSibling" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            android:text="Select Mood"
+            android:visibility="gone" />
 
-    <!-- Bottom Navigation Bar -->
+    </LinearLayout>
+
+    <!-- Fixed Bottom Navigation Bar -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        app:menu="@menu/bottom_nav_menu"/>
+        app:menu="@menu/bottom_nav_menu"
+        android:background="?android:attr/windowBackground"
+        app:labelVisibilityMode="labeled" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
