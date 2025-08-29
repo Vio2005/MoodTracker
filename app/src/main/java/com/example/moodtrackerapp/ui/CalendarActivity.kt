@@ -11,12 +11,10 @@ import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.AppDatabase
 import com.example.moodtrackerapp.data.entity.DailyMoodEntity
 import com.example.moodtrackerapp.databinding.ActivityCalendarBinding
-import com.example.moodtrackerapp.ui.MoodSelectionActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
-import kotlin.jvm.java
 
 class CalendarActivity : AppCompatActivity() {
 
@@ -40,17 +38,28 @@ class CalendarActivity : AppCompatActivity() {
         if (currentUserId == -1L) {
             Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
             finish()
+            overridePendingTransition(0, 0)
             return
         }
 
         binding.btnGoMain.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java))
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            overridePendingTransition(0, 0)
         }
 
+        // Bottom navigation
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    startActivity(Intent(this, MainActivity::class.java))
+                    if (this !is MainActivity) {
+                        val intent = Intent(this, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        overridePendingTransition(0, 0)
+                        finish()
+                        overridePendingTransition(0, 0)
+                    }
                     true
                 }
                 R.id.nav_calendar -> true
@@ -59,10 +68,9 @@ class CalendarActivity : AppCompatActivity() {
             }
         }
 
-        // Load calendar and counts
-        refreshCalendar()
+        binding.bottomNavigation.selectedItemId = R.id.nav_calendar
 
-        // Disable future dates
+        refreshCalendar()
         binding.calendarView.post { disableFutureDates() }
 
         // Fast month switching
@@ -71,7 +79,6 @@ class CalendarActivity : AppCompatActivity() {
                 updateCurrentPageMoodCounts()
             }
         })
-
         binding.calendarView.setOnPreviousPageChangeListener(object : OnCalendarPageChangeListener {
             override fun onChange() {
                 updateCurrentPageMoodCounts()
@@ -84,8 +91,11 @@ class CalendarActivity : AppCompatActivity() {
                 val calendar = eventDay.calendar
                 val today = Calendar.getInstance()
                 if (calendar.after(today)) {
-                    // Prevent selecting future dates
-                    Toast.makeText(this@CalendarActivity, "Cannot select future date", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@CalendarActivity,
+                        "Cannot select future date",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return
                 }
 
@@ -102,10 +112,12 @@ class CalendarActivity : AppCompatActivity() {
                             val intent = Intent(this@CalendarActivity, MoodDetailActivity::class.java)
                             intent.putExtra("dailyMoodId", mood.dailyMoodId)
                             startActivity(intent)
+                            overridePendingTransition(0, 0)
                         } else {
                             val intent = Intent(this@CalendarActivity, MoodSelectionActivity::class.java)
                             intent.putExtra("date", selectedDate)
                             startActivityForResult(intent, REQUEST_MOOD_TAG)
+                            overridePendingTransition(0, 0)
                         }
                     }
                 }
@@ -113,7 +125,6 @@ class CalendarActivity : AppCompatActivity() {
         })
     }
 
-    // 🔄 Refresh calendar dots and counts
     fun refreshCalendar() {
         CoroutineScope(Dispatchers.IO).launch {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
@@ -145,9 +156,7 @@ class CalendarActivity : AppCompatActivity() {
             }
 
             runOnUiThread {
-                // Refresh dots
                 binding.calendarView.setEvents(events)
-                // Refresh counts for current page
                 updateCurrentPageMoodCounts()
             }
         }
@@ -161,7 +170,6 @@ class CalendarActivity : AppCompatActivity() {
     private fun updateMoodCountsForMonth(year: Int, month: Int) {
         CoroutineScope(Dispatchers.IO).launch {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
-
             val filteredMoods = dailyMoods.filter {
                 val parts = it.date.split("-")
                 val moodYear = parts[0].toInt()
@@ -198,16 +206,13 @@ class CalendarActivity : AppCompatActivity() {
         }
     }
 
-    // Disable all future dates
     private fun disableFutureDates() {
         val today = Calendar.getInstance()
         val disabledDates = mutableListOf<Calendar>()
-
         val cal = Calendar.getInstance()
         cal.time = today.time
         cal.add(Calendar.DAY_OF_MONTH, 1)
 
-        // Disable up to 1 year ahead
         for (i in 0 until 365) {
             disabledDates.add(cal.clone() as Calendar)
             cal.add(Calendar.DAY_OF_MONTH, 1)
@@ -219,9 +224,13 @@ class CalendarActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_MOOD_TAG && resultCode == RESULT_OK) {
-            // Refresh immediately after adding/editing mood
             refreshCalendar()
         }
+    }
+
+    override fun finish() {
+        super.finish()
+        overridePendingTransition(0, 0) // Disable exit animation
     }
 
     override fun onDestroy() {

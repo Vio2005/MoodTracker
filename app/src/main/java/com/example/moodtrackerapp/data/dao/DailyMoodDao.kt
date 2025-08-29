@@ -45,7 +45,8 @@ interface DailyMoodDao {
     suspend fun getDailyMoodById(id: Int): DailyMoodEntity
 
 
-
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateDailyMood(dailyMood: DailyMoodEntity): Long
 
 
 }
