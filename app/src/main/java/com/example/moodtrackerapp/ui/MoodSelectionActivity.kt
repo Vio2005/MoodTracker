@@ -9,7 +9,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.AppDatabase
-import com.example.moodtrackerapp.data.entity.DailyMoodEntity
 import com.example.moodtrackerapp.data.entity.MoodEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,11 +29,11 @@ class MoodSelectionActivity : AppCompatActivity() {
         setContentView(R.layout.activity_mood_selection)
 
         recyclerView = findViewById(R.id.rvMoods)
-        recyclerView.layoutManager = GridLayoutManager(this, 3) // 3 images per row
+        recyclerView.layoutManager = GridLayoutManager(this, 3)
 
         db = AppDatabase.getInstance(this)
 
-        // Get date from intent or default to today
+        // Use date passed from CalendarActivity or fallback to today
         selectedDate = intent.getStringExtra("date") ?: getTodayDate()
 
         val sharedPref = getSharedPreferences("MoodAppPrefs", MODE_PRIVATE)
@@ -77,40 +76,24 @@ class MoodSelectionActivity : AppCompatActivity() {
                 } else existingMoods
             }
 
-            recyclerView.adapter = MoodAdapter(moods) { selectedMood ->
-                checkAndSaveMood(selectedMood)
-            }
-        }
-    }
+            recyclerView.adapter = MoodAdapter(moods) { mood ->
+                // Delete old mood and tags for this date before going to tag selection
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val oldMood = db.dailyMoodDao().getMoodByUserAndDate(currentUserId, selectedDate!!)
+                    oldMood?.let {
+                        db.dailyMoodTagDao().deleteTagsByDailyMoodId(it.dailyMoodId)
+                        db.dailyMoodDao().deleteDailyMoodById(it.dailyMoodId)
+                    }
 
-    private fun checkAndSaveMood(mood: MoodEntity) {
-        if (selectedDate == null || currentUserId == -1L) return
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            val existingMood =
-                db.dailyMoodDao().getMoodByUserAndDate(currentUserId, selectedDate!!)
-            val dailyMoodId = if (existingMood != null) {
-                existingMood.dailyMoodId
-            } else {
-                db.dailyMoodDao().insertDailyMood(
-                    DailyMoodEntity(
-                        userId = currentUserId,
-                        moodId = mood.moodId,
-                        date = selectedDate!!
-                    )
-                )
-            }
-
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    this@MoodSelectionActivity,
-                    "Mood saved: ${mood.type} on $selectedDate",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                val intent = Intent(this@MoodSelectionActivity, TagSelectionActivity::class.java)
-                intent.putExtra("dailyMoodId", dailyMoodId)
-                startActivityForResult(intent, REQUEST_TAGS)
+                    // Open TagSelectionActivity with new mood
+                    val intent = Intent(this@MoodSelectionActivity, TagSelectionActivity::class.java)
+                    intent.putExtra("moodId", mood.moodId)
+                    intent.putExtra("date", selectedDate) // pass correct selected date
+                    intent.putExtra("userId", currentUserId)
+                    withContext(Dispatchers.Main) {
+                        startActivityForResult(intent, REQUEST_TAGS)
+                    }
+                }
             }
         }
     }
@@ -118,13 +101,8 @@ class MoodSelectionActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_TAGS && resultCode == RESULT_OK) {
-            val refresh = data?.getBooleanExtra("refreshCalendar", false) ?: false
-            if (refresh) {
-                val resultIntent = Intent()
-                resultIntent.putExtra("refreshCalendar", true)
-                setResult(RESULT_OK, resultIntent)
-                finish()
-            }
+            setResult(RESULT_OK) // notify CalendarActivity to refresh
+            finish()
         }
     }
 }

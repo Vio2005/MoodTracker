@@ -25,17 +25,14 @@ class MainActivity : AppCompatActivity() {
     private val db by lazy { AppDatabase.getInstance(this) }
     private var currentUserId: Long = -1L
     private var todayDate: String = ""
-
-    private val REQUEST_MOOD_SELECTION = 1001
-    private val REQUEST_EDIT_MOOD = 1002
-    private val REQUEST_EDIT_TAGS_NOTE = 1003
+    private val REQUEST_TAGS_NOTE = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         recyclerView = findViewById(R.id.rvMoods)
-        recyclerView.layoutManager = GridLayoutManager(this, 3) // 3 columns
+        recyclerView.layoutManager = GridLayoutManager(this, 3)
 
         val prefs = getSharedPreferences("MoodAppPrefs", MODE_PRIVATE)
         currentUserId = prefs.getLong("loggedInUserId", -1L)
@@ -56,26 +53,13 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_home -> {
-                    if (this !is MainActivity) {
-                        val intent = Intent(this, MainActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
-                        overridePendingTransition(0, 0)
-                        finish()
-                        overridePendingTransition(0, 0)
-                    }
-                    true
-                }
+                R.id.nav_home -> true
                 R.id.nav_calendar -> {
-                    if (this !is CalendarActivity) {
-                        val intent = Intent(this, CalendarActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
-                        overridePendingTransition(0, 0)
-                        finish()
-                        overridePendingTransition(0, 0)
-                    }
+                    val intent = Intent(this, CalendarActivity::class.java)
+                    startActivity(intent)
+                    overridePendingTransition(0, 0)
+                    finish()
+                    overridePendingTransition(0, 0)
                     true
                 }
                 R.id.nav_profile -> true
@@ -86,66 +70,45 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadTodayMood() {
         lifecycleScope.launch {
-            val dailyMood = getTodayMood()
+            val dailyMood: DailyMoodEntity? = withContext(Dispatchers.IO) {
+                db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
+            }
+
             if (dailyMood != null) {
-                val mood = withContext(Dispatchers.IO) { db.moodDao().getMoodById(dailyMood.moodId) }
-                val tags = withContext(Dispatchers.IO) { db.tagDao().getTagsByDailyMoodId(dailyMood.dailyMoodId) }
-
-                findViewById<View>(R.id.layoutMoodDetails).visibility = View.VISIBLE
-                findViewById<View>(R.id.rvMoods).visibility = View.GONE
-
-                findViewById<android.widget.ImageView>(R.id.ivTodayMoodIcon).setImageResource(mood?.icon ?: R.drawable.mood_dot)
-                findViewById<android.widget.TextView>(R.id.tvTodayMoodType).text = mood?.type ?: ""
-                findViewById<android.widget.TextView>(R.id.tvTodayTags).text = if (tags.isNotEmpty()) tags.joinToString { it.name } else "No Tags"
-                findViewById<android.widget.TextView>(R.id.tvTodayNote).text = dailyMood.note ?: ""
-
-                findViewById<View>(R.id.btnEditMood).visibility = View.VISIBLE
-                findViewById<View>(R.id.btnEditTagsNote).visibility = View.VISIBLE
-                findViewById<View>(R.id.btnDeleteTodayMood).visibility = View.VISIBLE
-                findViewById<View>(R.id.btnSelectTodayMood).visibility = View.GONE
-
-                setupDetailButtons(dailyMood)
+                displaySavedMood(dailyMood)
             } else {
-                findViewById<View>(R.id.layoutMoodDetails).visibility = View.GONE
-                findViewById<View>(R.id.rvMoods).visibility = View.VISIBLE
-
-                loadMoodsForSelection()
+                showMoodSelection()
             }
         }
     }
 
-    private fun setupDetailButtons(dailyMood: DailyMoodEntity) {
-        findViewById<View>(R.id.btnEditMood).setOnClickListener {
-            val intent = Intent(this, EditMoodActivity::class.java)
-            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
-            startActivityForResult(intent, REQUEST_EDIT_MOOD)
-            overridePendingTransition(0, 0)
-        }
+    private fun displaySavedMood(dailyMood: DailyMoodEntity) {
+        lifecycleScope.launch {
+            val mood = withContext(Dispatchers.IO) { db.moodDao().getMoodById(dailyMood.moodId) }
+            val tags = withContext(Dispatchers.IO) { db.tagDao().getTagsByDailyMoodId(dailyMood.dailyMoodId) }
 
-        findViewById<View>(R.id.btnEditTagsNote).setOnClickListener {
-            val intent = Intent(this, EditTagAndNoteActivity::class.java)
-            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
-            startActivityForResult(intent, REQUEST_EDIT_TAGS_NOTE)
-            overridePendingTransition(0, 0)
-        }
+            findViewById<View>(R.id.layoutMoodDetails).visibility = View.VISIBLE
+            findViewById<View>(R.id.rvMoods).visibility = View.GONE
 
-        findViewById<View>(R.id.btnDeleteTodayMood).setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                db.dailyMoodDao().deleteDailyMoodById(dailyMood.dailyMoodId)
-                db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMood.dailyMoodId)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Today's mood deleted", Toast.LENGTH_SHORT).show()
-                    loadTodayMood()
-                }
-            }
+            findViewById<android.widget.ImageView>(R.id.ivTodayMoodIcon).setImageResource(mood?.icon ?: R.drawable.mood_dot)
+            findViewById<android.widget.TextView>(R.id.tvTodayMoodType).text = mood?.type ?: ""
+            findViewById<android.widget.TextView>(R.id.tvTodayTags).text =
+                if (tags.isNotEmpty()) tags.distinctBy { it.tagId }.joinToString { it.name } else "No Tags"
+            findViewById<android.widget.TextView>(R.id.tvTodayNote).text = dailyMood.note ?: ""
+
+            findViewById<View>(R.id.btnEditMood).visibility = View.VISIBLE
+            findViewById<View>(R.id.btnEditTagsNote).visibility = View.VISIBLE
+            findViewById<View>(R.id.btnDeleteTodayMood).visibility = View.VISIBLE
+            findViewById<View>(R.id.btnSelectTodayMood).visibility = View.GONE
+
+            setupDetailButtons(dailyMood)
         }
     }
 
-    private suspend fun getTodayMood(): DailyMoodEntity? = withContext(Dispatchers.IO) {
-        db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
-    }
+    private fun showMoodSelection() {
+        findViewById<View>(R.id.layoutMoodDetails).visibility = View.GONE
+        findViewById<View>(R.id.rvMoods).visibility = View.VISIBLE
 
-    private fun loadMoodsForSelection() {
         lifecycleScope.launch {
             val moods: List<MoodEntity> = withContext(Dispatchers.IO) {
                 val existingMoods = db.moodDao().getAllMoods()
@@ -167,39 +130,59 @@ class MainActivity : AppCompatActivity() {
             }
 
             recyclerView.adapter = MoodAdapter(moods) { selectedMood ->
-                saveMood(selectedMood)
+                val intent = Intent(this@MainActivity, TagSelectionActivity::class.java)
+                intent.putExtra("moodId", selectedMood.moodId.toLong())
+                intent.putExtra("date", todayDate)
+                intent.putExtra("userId", currentUserId.toLong())
+                intent.putExtra("isEdit", false)
+                startActivityForResult(intent, REQUEST_TAGS_NOTE)
+                overridePendingTransition(0, 0)
             }
         }
     }
 
-    private fun saveMood(mood: MoodEntity) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val existingMood = db.dailyMoodDao().getMoodByUserAndDate(currentUserId, todayDate)
-            val dailyMoodId = if (existingMood != null) {
-                existingMood.dailyMoodId
-            } else {
-                db.dailyMoodDao().insertDailyMood(
-                    DailyMoodEntity(userId = currentUserId, moodId = mood.moodId, date = todayDate)
-                )
-            }
-            withContext(Dispatchers.Main) {
-                val intent = Intent(this@MainActivity, TagSelectionActivity::class.java)
-                intent.putExtra("dailyMoodId", dailyMoodId)
-                startActivityForResult(intent, REQUEST_EDIT_TAGS_NOTE)
-                overridePendingTransition(0, 0)
+    private fun setupDetailButtons(dailyMood: DailyMoodEntity) {
+        // ✅ Edit mood (now sends dailyMoodId + moodId)
+        findViewById<View>(R.id.btnEditMood).setOnClickListener {
+            val intent = Intent(this, EditMoodActivity::class.java)
+            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
+            intent.putExtra("date", dailyMood.date)
+            intent.putExtra("userId", dailyMood.userId)
+            intent.putExtra("moodId", dailyMood.moodId)
+            intent.putExtra("isEdit", true)
+            startActivityForResult(intent, REQUEST_TAGS_NOTE)
+            overridePendingTransition(0, 0)
+        }
+
+        // Edit tags/note only
+        findViewById<View>(R.id.btnEditTagsNote).setOnClickListener {
+            val intent = Intent(this, TagSelectionActivity::class.java)
+            intent.putExtra("dailyMoodId", dailyMood.dailyMoodId)
+            intent.putExtra("userId", dailyMood.userId)
+            intent.putExtra("moodId", dailyMood.moodId)
+            intent.putExtra("date", dailyMood.date)
+            intent.putExtra("isEdit", true)
+            startActivityForResult(intent, REQUEST_TAGS_NOTE)
+            overridePendingTransition(0, 0)
+        }
+
+        // Delete today's mood
+        findViewById<View>(R.id.btnDeleteTodayMood).setOnClickListener {
+            lifecycleScope.launch(Dispatchers.IO) {
+                db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMood.dailyMoodId)
+                db.dailyMoodDao().deleteDailyMoodById(dailyMood.dailyMoodId)
+                withContext(Dispatchers.Main) { loadTodayMood() }
             }
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_OK) {
-            loadTodayMood()
-        }
+        if (resultCode == RESULT_OK) loadTodayMood()
     }
 
     override fun finish() {
         super.finish()
-        overridePendingTransition(0, 0) // Disable exit animation
+        overridePendingTransition(0, 0)
     }
 }

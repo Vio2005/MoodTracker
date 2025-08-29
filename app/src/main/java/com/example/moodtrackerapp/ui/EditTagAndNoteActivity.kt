@@ -19,7 +19,7 @@ class EditTagAndNoteActivity : AppCompatActivity() {
     private val db by lazy { AppDatabase.getInstance(this) }
     private lateinit var tagAdapter: TagAdapter
     private var dailyMoodId: Long = -1L
-    private var selectedTags = mutableSetOf<TagEntity>()
+    private var selectedTags = mutableSetOf<TagEntity>() // Using a Set prevents duplicates automatically
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +43,7 @@ class EditTagAndNoteActivity : AppCompatActivity() {
         // Load mood details
         loadData()
 
-        // Back button
+        // Cancel button
         binding.btnCancel.setOnClickListener { finish() }
 
         // Save button
@@ -53,7 +53,7 @@ class EditTagAndNoteActivity : AppCompatActivity() {
     private fun loadData() {
         lifecycleScope.launch {
             val dailyMood = withContext(Dispatchers.IO) {
-                db.dailyMoodDao().getDailyMoodById(dailyMoodId.toInt())
+                db.dailyMoodDao().getDailyMoodById(dailyMoodId)
             }
 
             if (dailyMood == null) {
@@ -67,11 +67,14 @@ class EditTagAndNoteActivity : AppCompatActivity() {
                 db.tagDao().getTagsByDailyMoodId(dailyMoodId)
             }
 
+            // Remove duplicates just in case
+            val distinctSavedTags = savedTags.distinctBy { it.tagId }
+
             selectedTags.clear()
-            selectedTags.addAll(savedTags)
+            selectedTags.addAll(distinctSavedTags)
 
             binding.etNote.setText(dailyMood.note ?: "")
-            tagAdapter.submitList(allTags, savedTags)
+            tagAdapter.submitList(allTags, distinctSavedTags)
         }
     }
 
@@ -79,7 +82,7 @@ class EditTagAndNoteActivity : AppCompatActivity() {
         val newNote = binding.etNote.text.toString()
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val dailyMood = db.dailyMoodDao().getDailyMoodById(dailyMoodId.toInt())
+            val dailyMood = db.dailyMoodDao().getDailyMoodById(dailyMoodId)
             if (dailyMood != null) {
                 // Update note
                 db.dailyMoodDao().updateDailyMood(
@@ -89,9 +92,11 @@ class EditTagAndNoteActivity : AppCompatActivity() {
                     )
                 )
 
-                // Update tags
+                // Delete old tags
                 db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMoodId)
-                selectedTags.forEach { tag ->
+
+                // Insert only distinct tags
+                selectedTags.distinctBy { it.tagId }.forEach { tag ->
                     db.dailyMoodTagDao().insertDailyMoodTag(
                         DailyMoodTagEntity(dailyMoodId = dailyMoodId, tagId = tag.tagId)
                     )

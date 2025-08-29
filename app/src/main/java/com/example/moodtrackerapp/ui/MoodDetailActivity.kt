@@ -18,6 +18,7 @@ class MoodDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMoodDetailBinding
     private val db by lazy { AppDatabase.getInstance(this) }
     private var dailyMoodId: Long = -1L
+    private var hasChanges = false
 
     private val REQUEST_EDIT = 3001
     private val REQUEST_EDIT_MOOD = 3002
@@ -34,24 +35,20 @@ class MoodDetailActivity : AppCompatActivity() {
             return
         }
 
-        // Back button
-        binding.btnBack.setOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { onBackPressed() }
 
-        // Edit Tag & Note button
         binding.btnEdit.setOnClickListener {
             val intent = Intent(this, EditTagAndNoteActivity::class.java)
             intent.putExtra("dailyMoodId", dailyMoodId)
             startActivityForResult(intent, REQUEST_EDIT)
         }
 
-        // Edit Mood button
         binding.btneditmood.setOnClickListener {
             val intent = Intent(this, EditMoodActivity::class.java)
             intent.putExtra("dailyMoodId", dailyMoodId)
             startActivityForResult(intent, REQUEST_EDIT_MOOD)
         }
 
-        // Delete button with confirmation
         binding.btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Delete Mood")
@@ -60,9 +57,10 @@ class MoodDetailActivity : AppCompatActivity() {
                     lifecycleScope.launch(Dispatchers.IO) {
                         db.dailyMoodDao().deleteDailyMoodById(dailyMoodId)
                         db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMoodId)
+                        hasChanges = true
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@MoodDetailActivity, "Mood deleted", Toast.LENGTH_SHORT).show()
-                            CalendarActivity.instance?.refreshCalendar()
+                            setResult(RESULT_OK)
                             finish()
                         }
                     }
@@ -72,14 +70,13 @@ class MoodDetailActivity : AppCompatActivity() {
                 .show()
         }
 
-        // Load mood + tags + note + icon
         loadMoodDetail()
     }
 
     private fun loadMoodDetail() {
         lifecycleScope.launch {
             val dailyMood = withContext(Dispatchers.IO) {
-                db.dailyMoodDao().getDailyMoodById(dailyMoodId.toInt())
+                db.dailyMoodDao().getDailyMoodById(dailyMoodId) // <-- Pass Long directly
             }
 
             if (dailyMood == null) {
@@ -96,11 +93,9 @@ class MoodDetailActivity : AppCompatActivity() {
                 db.tagDao().getTagsByDailyMoodId(dailyMoodId)
             }
 
-            // Show UI
             binding.tvDate.text = "Date: ${dailyMood.date}"
             binding.tvMood.text = "Mood: ${mood?.type ?: "Unknown"}"
 
-            // Set mood icon
             val moodIconRes = when (mood?.type) {
                 "Happy" -> R.drawable.jcir
                 "Sad" -> R.drawable.scir
@@ -115,7 +110,6 @@ class MoodDetailActivity : AppCompatActivity() {
             }
             binding.ivMoodIcon.setImageResource(moodIconRes)
 
-            // Show tags as comma-separated string
             binding.tvTags.text = if (savedTags.isNotEmpty()) {
                 "Tags: ${savedTags.joinToString { it.name }}"
             } else {
@@ -123,28 +117,21 @@ class MoodDetailActivity : AppCompatActivity() {
             }
 
             binding.etNote.setText(dailyMood.note ?: "")
-
-            // Refresh calendar
-            CalendarActivity.instance?.refreshCalendar()
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
-        when (requestCode) {
-            REQUEST_EDIT -> {
-                if (resultCode == RESULT_OK) {
-                    loadMoodDetail()
-                    Toast.makeText(this, "Tags & note updated", Toast.LENGTH_SHORT).show()
-                }
-            }
-            REQUEST_EDIT_MOOD -> {
-                if (resultCode == RESULT_OK) {
-                    loadMoodDetail()
-                    Toast.makeText(this, "Mood updated", Toast.LENGTH_SHORT).show()
-                }
-            }
+        if (resultCode == RESULT_OK) {
+            hasChanges = true
+            loadMoodDetail()
         }
+    }
+
+    override fun onBackPressed() {
+        if (hasChanges) {
+            setResult(RESULT_OK)
+        }
+        super.onBackPressed()
     }
 }

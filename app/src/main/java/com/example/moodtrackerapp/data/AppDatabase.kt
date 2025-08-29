@@ -15,7 +15,7 @@ import com.example.moodtrackerapp.data.entity.*
         TagEntity::class,
         DailyMoodTagEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
