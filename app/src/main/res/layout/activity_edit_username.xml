@@ -11,14 +11,7 @@
         android:layout_marginBottom="16dp">
 
         <!-- Back Icon -->
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/back_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/back_button"
-            android:textColor="@color/white"
-
-            />
+        
 
         <!-- Centered Title -->
         <TextView
