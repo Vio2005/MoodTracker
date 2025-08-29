@@ -20,4 +20,8 @@ interface UserDao {
     // Optional: check if email already exists
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): UserEntity?
+
+
+    @Update
+    suspend fun updateUser(user: UserEntity)
 }

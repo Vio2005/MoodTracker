@@ -11,6 +11,6 @@ data class UserEntity(
     val userId: Long=0,
     val email: String,
     val password: String,
-    val username: String,
+    var username: String,
     val createdAt: Long = System.currentTimeMillis()
 )

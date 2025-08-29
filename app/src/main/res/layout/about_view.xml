@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/setbg"
+    android:padding="16dp">
+
+    <!-- Top Bar Layout -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="16dp">
+
+        <!-- Back Icon -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/back_icon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/back_button"/>
+
+        <!-- Centered Title -->
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="About"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:gravity="center"
+            android:fontFamily="@font/corben_regular"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Scrollable Content Section -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- About Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#222222"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Guardian -->
+                    <TextView
+                        android:id="@+id/guardian_source"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="The Guardian"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <TextView
+                        android:id="@+id/guardian_quote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:text="“If you treat yourself like an ongoing experiment that you want to improve... I’ve been using the app Daylio. It takes five seconds to check.”"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:lineSpacingExtra="2dp"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <!-- Forbes -->
+                    <TextView
+                        android:id="@+id/forbes_source"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Forbes"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <TextView
+                        android:id="@+id/forbes_quote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:text="“Successful people regularly evaluate their days. And what is easier than keeping records digital? Thanks to this app you do not have to write a word.”"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:lineSpacingExtra="2dp"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <!-- Mashable -->
+                    <TextView
+                        android:id="@+id/mashable_source"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Mashable"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <TextView
+                        android:id="@+id/mashable_quote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:text="“It's incredibly helpful for noticing patterns of behaviour that may be inadvertently impacting your mood. You may notice that any day you don't have a 'good meal' you feel worse...”"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:lineSpacingExtra="2dp"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <!-- Lifehacker -->
+                    <TextView
+                        android:id="@+id/lifehacker_source"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Lifehacker"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/corben_regular"/>
+
+                    <TextView
+                        android:id="@+id/lifehacker_quote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="“Out of all of the apps we’ve covered, Daylio’s probably the easiest to use. Just launch the app, select a smiley face that represents your overall mood, and then select the activities you did today.”"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:lineSpacingExtra="2dp"
+                        android:fontFamily="@font/corben_regular"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

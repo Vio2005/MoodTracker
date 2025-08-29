@@ -62,6 +62,9 @@ class CalendarActivity : AppCompatActivity() {
                 }
                 R.id.nav_calendar -> true
                 R.id.nav_profile -> {
+                    val intent = Intent(this, MoreActivity::class.java)
+                    startActivity(intent)
+                    overridePendingTransition(0, 0)
                     finish()
                     overridePendingTransition(0, 0)
                     true

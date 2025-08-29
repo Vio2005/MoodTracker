@@ -62,7 +62,14 @@ class MainActivity : AppCompatActivity() {
                     overridePendingTransition(0, 0)
                     true
                 }
-                R.id.nav_profile -> true
+                R.id.nav_profile -> {
+                    val intent = Intent(this, MoreActivity::class.java)
+                    startActivity(intent)
+                    overridePendingTransition(0, 0)
+                    finish()
+                    overridePendingTransition(0, 0)
+                    true
+                }
                 else -> false
             }
         }
