@@ -22,18 +22,22 @@ import androidx.room.PrimaryKey
         )
     ],
     indices = [
-        Index(value = ["userId"]),   // index on userId for fast joins
-        Index(value = ["moodId"])    // index on moodId for fast joins
+        Index(value = ["userId"]),   // Speed up queries with userId
+        Index(value = ["moodId"]),   // Speed up queries with moodId
+        Index(value = ["date"])      // Add index for searching by date
     ]
 )
 data class DailyMoodEntity(
     @PrimaryKey(autoGenerate = true)
     val dailyMoodId: Long = 0,
-    val userId: Long,     // FK → users.userId
+
+    val userId: Long,      // FK → users.userId
     val moodId: Long,      // FK → moods.moodId
-    val date: String,     // YYYY-MM-DD
+
+    val date: String,      // YYYY-MM-DD format
+
     val note: String? = null,
+
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
-

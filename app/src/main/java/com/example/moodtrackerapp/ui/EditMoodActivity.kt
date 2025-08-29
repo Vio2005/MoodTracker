@@ -53,7 +53,8 @@ class EditMoodActivity : AppCompatActivity() {
 
     private fun updateMood(selectedMood: MoodEntity) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val dailyMood: DailyMoodEntity? = db.dailyMoodDao().getDailyMoodById(dailyMoodId.toInt())
+            // Pass dailyMoodId as Long directly
+            val dailyMood: DailyMoodEntity? = db.dailyMoodDao().getDailyMoodById(dailyMoodId)
             if (dailyMood != null) {
                 db.dailyMoodDao().updateDailyMood(
                     dailyMood.copy(

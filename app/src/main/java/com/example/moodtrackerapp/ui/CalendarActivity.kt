@@ -2,8 +2,10 @@ package com.example.moodtrackerapp.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.applandeo.materialcalendarview.EventDay
 import com.applandeo.materialcalendarview.listeners.OnDayClickListener
 import com.applandeo.materialcalendarview.listeners.OnCalendarPageChangeListener
@@ -14,6 +16,7 @@ import com.example.moodtrackerapp.databinding.ActivityCalendarBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.*
 
 class CalendarActivity : AppCompatActivity() {
@@ -22,17 +25,16 @@ class CalendarActivity : AppCompatActivity() {
     private val db by lazy { AppDatabase.getInstance(this) }
     private var currentUserId: Long = -1L
     private val REQUEST_MOOD_TAG = 1001
+    private var needsRefresh = false
 
-    companion object {
-        var instance: CalendarActivity? = null
-    }
+    private val dateFormat = SimpleDateFormat("yyyy-M-d", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        instance = this
         binding = ActivityCalendarBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Load current user ID
         val sharedPref = getSharedPreferences("MoodAppPrefs", MODE_PRIVATE)
         currentUserId = sharedPref.getLong("loggedInUserId", -1L)
         if (currentUserId == -1L) {
@@ -42,9 +44,10 @@ class CalendarActivity : AppCompatActivity() {
             return
         }
 
+        // Go back to main
         binding.btnGoMain.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
             overridePendingTransition(0, 0)
         }
 
@@ -52,56 +55,44 @@ class CalendarActivity : AppCompatActivity() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    if (this !is MainActivity) {
-                        val intent = Intent(this, MainActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
-                        overridePendingTransition(0, 0)
-                        finish()
-                        overridePendingTransition(0, 0)
-                    }
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                    overridePendingTransition(0, 0)
                     true
                 }
                 R.id.nav_calendar -> true
-                R.id.nav_profile -> true
+                R.id.nav_profile -> {
+                    finish()
+                    overridePendingTransition(0, 0)
+                    true
+                }
                 else -> false
             }
         }
-
         binding.bottomNavigation.selectedItemId = R.id.nav_calendar
 
+        // Calendar setup
         refreshCalendar()
         binding.calendarView.post { disableFutureDates() }
 
-        // Fast month switching
         binding.calendarView.setOnForwardPageChangeListener(object : OnCalendarPageChangeListener {
-            override fun onChange() {
-                updateCurrentPageMoodCounts()
-            }
+            override fun onChange() { updateCurrentPageMoodCounts() }
         })
         binding.calendarView.setOnPreviousPageChangeListener(object : OnCalendarPageChangeListener {
-            override fun onChange() {
-                updateCurrentPageMoodCounts()
-            }
+            override fun onChange() { updateCurrentPageMoodCounts() }
         })
 
-        // Day click listener
         binding.calendarView.setOnDayClickListener(object : OnDayClickListener {
             override fun onDayClick(eventDay: EventDay) {
                 val calendar = eventDay.calendar
                 val today = Calendar.getInstance()
                 if (calendar.after(today)) {
-                    Toast.makeText(
-                        this@CalendarActivity,
-                        "Cannot select future date",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(this@CalendarActivity, "Cannot select future date", Toast.LENGTH_SHORT).show()
                     return
                 }
 
-                val selectedDate = "${calendar.get(Calendar.YEAR)}-" +
-                        "${calendar.get(Calendar.MONTH) + 1}-" +
-                        "${calendar.get(Calendar.DAY_OF_MONTH)}"
+                // Format selected date
+                val selectedDate = dateFormat.format(calendar.time)
 
                 CoroutineScope(Dispatchers.IO).launch {
                     val mood: DailyMoodEntity? =
@@ -111,9 +102,10 @@ class CalendarActivity : AppCompatActivity() {
                         if (mood != null) {
                             val intent = Intent(this@CalendarActivity, MoodDetailActivity::class.java)
                             intent.putExtra("dailyMoodId", mood.dailyMoodId)
-                            startActivity(intent)
+                            startActivityForResult(intent, REQUEST_MOOD_TAG)
                             overridePendingTransition(0, 0)
                         } else {
+                            // Pass the correct selected date to MoodSelectionActivity
                             val intent = Intent(this@CalendarActivity, MoodSelectionActivity::class.java)
                             intent.putExtra("date", selectedDate)
                             startActivityForResult(intent, REQUEST_MOOD_TAG)
@@ -128,18 +120,18 @@ class CalendarActivity : AppCompatActivity() {
     fun refreshCalendar() {
         CoroutineScope(Dispatchers.IO).launch {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
-            val moodList = dailyMoods.map { dailyMood ->
+            val moodList = dailyMoods.mapNotNull { dailyMood ->
                 val mood = db.moodDao().getMoodById(dailyMood.moodId)
-                Pair(dailyMood, mood)
+                mood?.let { Pair(dailyMood, it.type) }
             }
 
-            val events: List<EventDay> = moodList.map { (dailyMood, mood) ->
+            val events: List<EventDay> = moodList.map { (dailyMood, moodType) ->
                 val cal = Calendar.getInstance().apply {
                     val parts = dailyMood.date.split("-")
-                    set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+                    if (parts.size == 3) set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
                 }
 
-                val drawableRes = when (mood?.type) {
+                val drawableRes = when (moodType) {
                     "Happy" -> R.drawable.jcir
                     "Sad" -> R.drawable.scir
                     "Angry" -> R.drawable.acir
@@ -163,8 +155,10 @@ class CalendarActivity : AppCompatActivity() {
     }
 
     private fun updateCurrentPageMoodCounts() {
-        val currentPage = binding.calendarView.currentPageDate
-        updateMoodCountsForMonth(currentPage.get(Calendar.YEAR), currentPage.get(Calendar.MONTH) + 1)
+        val currentPage: Calendar = binding.calendarView.currentPageDate
+        val year = currentPage.get(Calendar.YEAR)
+        val month = currentPage.get(Calendar.MONTH) + 1
+        updateMoodCountsForMonth(year, month)
     }
 
     private fun updateMoodCountsForMonth(year: Int, month: Int) {
@@ -172,33 +166,31 @@ class CalendarActivity : AppCompatActivity() {
             val dailyMoods = db.dailyMoodDao().getAllByUser(currentUserId)
             val filteredMoods = dailyMoods.filter {
                 val parts = it.date.split("-")
-                val moodYear = parts[0].toInt()
-                val moodMonth = parts[1].toInt()
-                moodYear == year && moodMonth == month
+                parts.size == 3 && parts[0].toInt() == year && parts[1].toInt() == month
             }
 
             val moodCounts = mutableMapOf<String, Int>()
             for (dailyMood in filteredMoods) {
                 val mood = db.moodDao().getMoodById(dailyMood.moodId)
-                mood?.let {
-                    moodCounts[it.type] = (moodCounts[it.type] ?: 0) + 1
-                }
+                mood?.let { moodCounts[it.type] = (moodCounts[it.type] ?: 0) + 1 }
             }
 
             runOnUiThread {
                 binding.moodCountLayout.removeAllViews()
                 if (moodCounts.isEmpty()) {
-                    val noData = android.widget.TextView(this@CalendarActivity)
-                    noData.text = "No moods recorded this month"
-                    noData.textSize = 16f
-                    noData.setTextColor(resources.getColor(R.color.black))
+                    val noData = TextView(this@CalendarActivity).apply {
+                        text = "No moods recorded this month"
+                        textSize = 16f
+                        setTextColor(ContextCompat.getColor(this@CalendarActivity, R.color.black))
+                    }
                     binding.moodCountLayout.addView(noData)
                 } else {
                     moodCounts.forEach { (type, count) ->
-                        val tv = android.widget.TextView(this@CalendarActivity)
-                        tv.text = "$type: $count"
-                        tv.textSize = 16f
-                        tv.setTextColor(resources.getColor(R.color.black))
+                        val tv = TextView(this@CalendarActivity).apply {
+                            text = "$type: $count"
+                            textSize = 16f
+                            setTextColor(ContextCompat.getColor(this@CalendarActivity, R.color.black))
+                        }
                         binding.moodCountLayout.addView(tv)
                     }
                 }
@@ -224,17 +216,20 @@ class CalendarActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_MOOD_TAG && resultCode == RESULT_OK) {
+            needsRefresh = true
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (needsRefresh) {
             refreshCalendar()
+            needsRefresh = false
         }
     }
 
     override fun finish() {
         super.finish()
-        overridePendingTransition(0, 0) // Disable exit animation
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        instance = null
+        overridePendingTransition(0, 0)
     }
 }
