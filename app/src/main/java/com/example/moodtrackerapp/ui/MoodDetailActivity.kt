@@ -6,10 +6,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.AppDatabase
-import com.example.moodtrackerapp.data.entity.DailyMoodTagEntity
-import com.example.moodtrackerapp.data.entity.TagEntity
 import com.example.moodtrackerapp.databinding.ActivityMoodDetailBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,9 +17,8 @@ class MoodDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMoodDetailBinding
     private val db by lazy { AppDatabase.getInstance(this) }
-    private lateinit var tagAdapter: TagAdapter
     private var dailyMoodId: Long = -1L
-    private var selectedTags = mutableSetOf<TagEntity>()
+    private var hasChanges = false
 
     private val REQUEST_EDIT = 3001
     private val REQUEST_EDIT_MOOD = 3002
@@ -38,29 +35,20 @@ class MoodDetailActivity : AppCompatActivity() {
             return
         }
 
-        // Setup RecyclerView
-        binding.rvTags.layoutManager = LinearLayoutManager(this)
-        tagAdapter = TagAdapter { tag, _ -> }
-        binding.rvTags.adapter = tagAdapter
+        binding.btnBack.setOnClickListener { onBackPressed() }
 
-        // Back button
-        binding.btnBack.setOnClickListener { finish() }
-
-        // Edit Tag & Note button
         binding.btnEdit.setOnClickListener {
             val intent = Intent(this, EditTagAndNoteActivity::class.java)
             intent.putExtra("dailyMoodId", dailyMoodId)
             startActivityForResult(intent, REQUEST_EDIT)
         }
 
-        // Edit Mood button
         binding.btneditmood.setOnClickListener {
             val intent = Intent(this, EditMoodActivity::class.java)
             intent.putExtra("dailyMoodId", dailyMoodId)
             startActivityForResult(intent, REQUEST_EDIT_MOOD)
         }
 
-        // Delete button with confirmation
         binding.btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Delete Mood")
@@ -69,10 +57,10 @@ class MoodDetailActivity : AppCompatActivity() {
                     lifecycleScope.launch(Dispatchers.IO) {
                         db.dailyMoodDao().deleteDailyMoodById(dailyMoodId)
                         db.dailyMoodTagDao().deleteTagsByDailyMoodId(dailyMoodId)
-
+                        hasChanges = true
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@MoodDetailActivity, "Mood deleted", Toast.LENGTH_SHORT).show()
-                            CalendarActivity.instance?.refreshCalendar() // refresh calendar immediately
+                            setResult(RESULT_OK)
                             finish()
                         }
                     }
@@ -82,14 +70,13 @@ class MoodDetailActivity : AppCompatActivity() {
                 .show()
         }
 
-        // Load mood + tags + note
         loadMoodDetail()
     }
 
     private fun loadMoodDetail() {
         lifecycleScope.launch {
             val dailyMood = withContext(Dispatchers.IO) {
-                db.dailyMoodDao().getDailyMoodById(dailyMoodId.toInt())
+                db.dailyMoodDao().getDailyMoodById(dailyMoodId) // <-- Pass Long directly
             }
 
             if (dailyMood == null) {
@@ -106,33 +93,45 @@ class MoodDetailActivity : AppCompatActivity() {
                 db.tagDao().getTagsByDailyMoodId(dailyMoodId)
             }
 
-            selectedTags.clear()
-            selectedTags.addAll(savedTags)
-
-            // Show UI
             binding.tvDate.text = "Date: ${dailyMood.date}"
             binding.tvMood.text = "Mood: ${mood?.type ?: "Unknown"}"
+
+            val moodIconRes = when (mood?.type) {
+                "Happy" -> R.drawable.jcir
+                "Sad" -> R.drawable.scir
+                "Angry" -> R.drawable.acir
+                "Disgust" -> R.drawable.disguestmood
+                "Lazy" -> R.drawable.lcir
+                "Anxiety" -> R.drawable.anxietymood
+                "Fear" -> R.drawable.fcir
+                "Embarrass" -> R.drawable.embmood
+                "Envy" -> R.drawable.envymood
+                else -> R.drawable.mood_dot
+            }
+            binding.ivMoodIcon.setImageResource(moodIconRes)
+
+            binding.tvTags.text = if (savedTags.isNotEmpty()) {
+                "Tags: ${savedTags.joinToString { it.name }}"
+            } else {
+                "Tags: None"
+            }
+
             binding.etNote.setText(dailyMood.note ?: "")
-            tagAdapter.submitList(savedTags, savedTags)
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
-        when (requestCode) {
-            REQUEST_EDIT -> {
-                if (resultCode == RESULT_OK) {
-                    loadMoodDetail()
-                    Toast.makeText(this, "Tags & note updated", Toast.LENGTH_SHORT).show()
-                }
-            }
-            REQUEST_EDIT_MOOD -> {
-                if (resultCode == RESULT_OK) {
-                    loadMoodDetail()
-                    Toast.makeText(this, "Mood updated", Toast.LENGTH_SHORT).show()
-                }
-            }
+        if (resultCode == RESULT_OK) {
+            hasChanges = true
+            loadMoodDetail()
         }
+    }
+
+    override fun onBackPressed() {
+        if (hasChanges) {
+            setResult(RESULT_OK)
+        }
+        super.onBackPressed()
     }
 }

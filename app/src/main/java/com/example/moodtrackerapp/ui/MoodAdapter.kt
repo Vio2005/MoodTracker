@@ -9,7 +9,7 @@ import com.example.moodtrackerapp.R
 import com.example.moodtrackerapp.data.entity.MoodEntity
 
 class MoodAdapter(
-    private val moods: List<MoodEntity>,
+    private var moods: List<MoodEntity>,
     private val onClick: (MoodEntity) -> Unit
 ) : RecyclerView.Adapter<MoodAdapter.MoodViewHolder>() {
 
@@ -18,17 +18,14 @@ class MoodAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MoodViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_mood, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_mood, parent, false)
         return MoodViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: MoodViewHolder, position: Int) {
         val mood = moods[position]
-        holder.imageView.setImageResource(mood.icon!!)
-        holder.imageView.setOnClickListener {
-            onClick(mood)
-        }
+        mood.icon?.let { holder.imageView.setImageResource(it) }
+        holder.imageView.setOnClickListener { onClick(mood) }
     }
 
     override fun getItemCount(): Int = moods.size

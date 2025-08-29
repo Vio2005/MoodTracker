@@ -10,6 +10,10 @@ interface DailyMoodTagDao {
     @Insert
     suspend fun insertDailyMoodTag(dailyMoodTag: DailyMoodTagEntity)
 
+    // Insert multiple DailyMoodTag entities at once
+    @Insert
+    suspend fun insertDailyMoodTags(dailyMoodTags: List<DailyMoodTagEntity>)
+
     // Delete a single DailyMoodTag entity
     @Delete
     suspend fun deleteDailyMoodTag(dailyMoodTag: DailyMoodTagEntity)
