@@ -47,7 +47,7 @@ class MoreActivity : AppCompatActivity() {
 
         // Find your cards
         cardAbout = findViewById(R.id.cardAbout)
-        cardSettings = findViewById(R.id.cardSettings)
+
         cardEditMoods = findViewById(R.id.cardEditMoods)
         cardProfile = findViewById(R.id.cardProfile)
         cardLogout = findViewById(R.id.cardLogout)
@@ -76,7 +76,7 @@ class MoreActivity : AppCompatActivity() {
 
         // Click listeners for other cards
         cardAbout.setOnClickListener { startActivity(Intent(this, AboutActivity::class.java)) }
-        cardSettings.setOnClickListener { startActivity(Intent(this, ModeActivity::class.java)) }
+
         cardEditMoods.setOnClickListener { /* TODO: Open Reminder/Edit Moods */ }
         cardProfile.setOnClickListener { /* TODO: Open Profile/Location */ }
 
