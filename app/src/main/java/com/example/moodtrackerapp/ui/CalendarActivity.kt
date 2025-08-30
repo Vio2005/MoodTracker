@@ -43,13 +43,7 @@ class CalendarActivity : AppCompatActivity() {
             overridePendingTransition(0, 0)
             return
         }
-
-        // Go back to main
-        binding.btnGoMain.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-            overridePendingTransition(0, 0)
-        }
+        
 
         // Bottom navigation
         binding.bottomNavigation.setOnItemSelectedListener { item ->

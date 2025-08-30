@@ -45,12 +45,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp" />
 
-        <Button
-            android:id="@+id/btnGoMain"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Go to Main"
-            android:layout_marginTop="16dp"/>
     </LinearLayout>
 
     <!-- Bottom Navigation Bar -->
